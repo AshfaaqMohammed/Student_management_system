@@ -1,8 +1,9 @@
 import sys
 from PyQt6.QtWidgets import QApplication, \
     QLabel, QWidget, QGridLayout, QLineEdit, QPushButton, QMainWindow, \
-    QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox
-from PyQt6.QtGui import QAction
+    QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, \
+    QToolBar, QStatusBar
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtCore import Qt
 import sqlite3
 
@@ -11,32 +12,61 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Student management system")
+        self.setMinimumSize(800,600)
 
-        #creating a menubar
+    # creating a menubar
         file_menu_item = self.menuBar().addMenu("&File")
         help_manu_item = self.menuBar().addMenu("&Help")
         edit_menu_iem = self.menuBar().addMenu("&Edit")
 
-        #Qaction for file:
-        add_student_action = QAction("Add student", self)
+    # Qaction for file:
+        add_student_action = QAction(QIcon("icons/add.png"),"Add student", self)
         add_student_action.triggered.connect(self.insert)
         file_menu_item.addAction(add_student_action)
 
-        #Qaction for help:
+    # Qaction for help:
         about_action = QAction("About", self)
         help_manu_item.addAction(about_action)
 
-        #Qaction for edit:
-        search_action = QAction("Search", self)
+    # Qaction for edit:
+        search_action = QAction(QIcon("icons/search.png"),"Search", self)
         search_action.triggered.connect(self.search)
         edit_menu_iem.addAction(search_action)
 
-        #creating a table
+    # creating a table
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(("Id", "Name", "Course", "Phone no."))
         self.table.verticalHeader().setVisible(False)
         self.setCentralWidget(self.table)
+
+    # create toolbar and add toolbar elements
+        toolbar = QToolBar()
+        toolbar.setMovable(True)
+        self.addToolBar(toolbar)
+        toolbar.addAction(add_student_action)
+        toolbar.addAction(search_action)
+
+    # create status bar an add status bar elements
+        self.statusbar = QStatusBar()
+        self.setStatusBar(self.statusbar)
+
+    # detect a cell click
+        self.table.cellClicked.connect(self.cell_clicked)
+
+    def cell_clicked(self):
+        edit_button = QPushButton("Edit Record")
+        edit_button.clicked.connect(self.edit)
+        delete_button = QPushButton("Delete Record")
+        delete_button.clicked.connect(self.delete)
+
+        children = self.findChildren(QPushButton)
+        if children:
+            for child in children:
+                self.statusbar.removeWidget(child)
+
+        self.statusbar.addWidget(edit_button)
+        self.statusbar.addWidget(delete_button)
 
     #function for loading the data into the table
     def load_data(self):
@@ -60,8 +90,26 @@ class MainWindow(QMainWindow):
         dialog = SearchDialog()
         dialog.exec()
 
+    def edit(self):
+        dialog = EditDialog()
+        dialog.exec()
 
-#new class for new window(insert window)
+    def delete(self):
+        dialog = DeleteDialog()
+        dialog.exec()
+
+
+# New class for new window(delete window)
+class DeleteDialog(QDialog):
+    pass
+
+
+# New class for new window(edit window)
+class EditDialog(QDialog):
+    pass
+
+
+# new class for new window(insert window)
 class InsertDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -103,7 +151,7 @@ class InsertDialog(QDialog):
         SMS.load_data()
 
 
-#New class for new window (search)
+# New class for new window (search)
 class SearchDialog(QDialog):
     def __init__(self):
         super().__init__()
