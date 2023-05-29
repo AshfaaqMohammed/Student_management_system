@@ -2,7 +2,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, \
     QLabel, QWidget, QGridLayout, QLineEdit, QPushButton, QMainWindow, \
     QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, \
-    QToolBar, QStatusBar
+    QToolBar, QStatusBar, QMessageBox
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtCore import Qt
 import sqlite3
@@ -26,7 +26,9 @@ class MainWindow(QMainWindow):
 
     # Qaction for help:
         about_action = QAction("About", self)
+        about_action.triggered.connect(self.about)
         help_manu_item.addAction(about_action)
+
 
     # Qaction for edit:
         search_action = QAction(QIcon("icons/search.png"),"Search", self)
@@ -98,15 +100,118 @@ class MainWindow(QMainWindow):
         dialog = DeleteDialog()
         dialog.exec()
 
+    def about(self):
+        dialog = AboutDialog()
+        dialog.exec()
+
+class AboutDialog(QMessageBox):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("About")
+        content = """
+        This app is built using PYQT6 library, and sqlite3 as
+        database.
+        This app helps in managing the students , like inserting a new record
+        or deleting a record or updating and also searching a record.
+        """
+        self.setText(content)
+
 
 # New class for new window(delete window)
 class DeleteDialog(QDialog):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Delete record")
+        # self.setFixedWidth(250)
+        # self.setFixedHeight(250)
+
+        layout = QGridLayout()
+        question = QLabel("Are you sure you want to delete?")
+        yes = QPushButton("YES")
+        no = QPushButton("NO")
+
+        layout.addWidget(question, 0, 0, 1, 2)
+        layout.addWidget(yes, 1, 0)
+        layout.addWidget(no, 1, 1)
+
+        yes.clicked.connect(self.delete_student)
+
+        self.setLayout(layout)
+
+    def delete_student(self):
+        index = SMS.table.currentRow()
+        student_id = SMS.table.item(index, 0).text()
+
+        connection = sqlite3.connect("database.db")
+        coursor = connection.cursor()
+        coursor.execute("DELETE from students WHERE id = ?", (student_id, ))
+
+        connection.commit()
+        coursor.close()
+        connection.close()
+        SMS.load_data()
+
+        self.close()
+
+        conformation_widget = QMessageBox()
+        conformation_widget.setWindowTitle("Success")
+        conformation_widget.setText("The record was deleted successfully!")
+        conformation_widget.exec()
 
 
 # New class for new window(edit window)
 class EditDialog(QDialog):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Update student data")
+        self.setFixedWidth(300)
+        self.setFixedHeight(300)
+
+        layout = QVBoxLayout()
+
+    # getting student name from selected row
+        index = SMS.table.currentRow()
+        student_name = SMS.table.item(index, 1).text()
+        self.student_name = QLineEdit(student_name)
+        self.student_name.setPlaceholderText("Name")
+        layout.addWidget(self.student_name)
+
+    # getting student id
+        self.student_id = SMS.table.item(index,0).text()
+
+    # getting course name from selected row
+        course_name = SMS.table.item(index, 2).text()
+        self.course_name = QComboBox()
+        courses = ["Biology", "Math", "Astronomy", "Physics"]
+        self.course_name.addItems(courses)
+        self.course_name.setCurrentText(course_name)
+        layout.addWidget(self.course_name)
+
+    # getting phone number from selected row
+        phone_number = SMS.table.item(index, 3).text()
+        self.student_number = QLineEdit(phone_number)
+        self.student_number.setPlaceholderText("Phone no.")
+        layout.addWidget(self.student_number)
+
+    # Adding button
+        btn = QPushButton("Update")
+        btn.clicked.connect(self.update_record)
+        layout.addWidget(btn)
+        self.setLayout(layout)
+
+    def update_record(self):
+        connection = sqlite3.connect("database.db")
+        cursor = connection.cursor()
+        cursor.execute("UPDATE students SET name = ?, course = ?, mobile = ? WHERE id = ?",
+                       (self.student_name.text(),
+                        self.course_name.itemText(self.course_name.currentIndex()),
+                        self.student_number.text(),
+                        self.student_id))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        # to refresh the table
+        SMS.load_data()
 
 
 # new class for new window(insert window)
